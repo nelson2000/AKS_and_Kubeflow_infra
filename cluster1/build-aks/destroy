@@ -1,0 +1,3 @@
+echo 'destroying all infrastructure...'
+./rgdelete
+echo 'destruction completed'

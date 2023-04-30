@@ -1,0 +1,33 @@
+
+export resourcegroup1=aks-demo-rg1 
+export resourcegroup2=aks-demo-rg2 
+export location1=canadaeast
+export location2=canadacentral
+export iden1=aks-identity1
+export iden2=aks-identity2
+
+echo 'creating managed identity....'
+# create managed identity
+az identity create \
+    --name $iden1 \
+    --resource-group $resourcegroup1
+
+# get the id of managed identity
+export identityId1=$(az identity show \
+    --name $iden1 \
+    --resource-group $resourcegroup1 \
+    --query id \
+    --output tsv)
+
+# create managed identity
+az identity create \
+    --name $iden2 \
+    --resource-group $resourcegroup2
+
+# get the id of managed identity
+export identityId2=$(az identity show \
+    --name $iden2 \
+    --resource-group $resourcegroup2 \
+    --query id \
+    --output tsv)
+echo 'created managed identities successfully'

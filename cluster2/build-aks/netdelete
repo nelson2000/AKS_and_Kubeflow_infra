@@ -1,0 +1,15 @@
+export resourcegroup1=aks-demo-rg1 
+export resourcegroup2=aks-demo-rg2 
+export vnet1=aks-demo-vnet1
+export vnet2=aks-demo-vnet2
+export location1=canadaeast
+export location2=canadacentral
+export subnet1=aks-demo-subnet1
+export subnet2=aks-demo-subnet2
+
+echo 'deleting vnet and subnets'
+
+az network vnet delete --resource-group $resourcegroup1 --name $vnet1
+az network vnet delete --resource-group $resourcegroup2 --name $vnet2
+
+echo 'vnet and all subnets deleted'

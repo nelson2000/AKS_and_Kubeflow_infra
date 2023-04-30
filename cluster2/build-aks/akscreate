@@ -1,0 +1,99 @@
+#!/bin/bash
+# create the AKS cluster
+export resourcegroup1=aks-demo-rg1 
+export resourcegroup2=aks-demo-rg2 
+export vnet1=aks-demo-vnet1
+export vnet2=aks-demo-vnet2
+export location1=canadaeast
+export location2=canadacentral
+export subnet1=aks-demo-subnet1
+export subnet2=aks-demo-subnet2
+export cluster1=aks-demo-cluster1
+export cluster2=aks-demo-cluster2
+export iden1=aks-identity1
+export iden2=aks-identity2 
+
+export identityId1=$(az identity show \
+    --name $iden1 \
+    --resource-group $resourcegroup1 \
+    --query id \
+    --output tsv)
+
+export identityId2=$(az identity show \
+    --name $iden2 \
+    --resource-group $resourcegroup2 \
+    --query id \
+    --output tsv)
+
+export subnetId1=$(az network vnet subnet show --name $subnet1 \
+    --vnet-name $vnet1 \
+    --resource-group $resourcegroup1 \
+    --query id \
+    --output tsv) 
+
+export subnetId2=$(az network vnet subnet show --name $subnet2 \
+    --vnet-name $vnet2 \
+    --resource-group $resourcegroup2 \
+    --query id \
+    --output tsv) 
+
+
+echo 'creating aks cluster...'
+
+az aks create --name $cluster1 --resource-group $resourcegroup1 --enable-blob-driver --attach-acr thanosstones --kubernetes-version 1.24 -s Standard_D8s_v3 --nodepool-name aksagent  --enable-managed-identity --admin-username aksuser --assign-identity $identityId1 --vnet-subnet-id $subnetId1 --location $location1
+
+echo 'aks has been created'
+
+sleep 2
+
+echo 'updating aks cluster ...'
+
+az aks update -g $resourcegroup1 -n $cluster1  --attach-acr thanosstones
+# az aks update -g $resourcegroup1 -n $cluster1 --attach-acr frontendflaskapi
+# az aks update -g $resourcegroup1 -n $cluster1 --enable-blob-driver
+
+
+
+
+# &&
+# --enable-addons azure-keyvault-secrets-provider --attach-acr thanosstones --attach-acr thanosstones --docker-bridge-address 172.17.0.1/16 --dns-service-ip 10.0.0.10 
+# # --pod-subnet-id $subnetId1  \
+# --attach-acr thanosstones \
+# --attach-acr frontendflaskapi \
+# --dns-service-ip 10.0.0.10 \
+# --docker-bridge-address 172.17.0.1/16 \
+# # --enable-azure-keyvault-kms \
+# # # --enable-azure-rbac \
+# --enable-blob-driver \
+# --enable-cluster-autoscaler \
+# --load-balancer-sku standard \
+# # --location $resourcegroup1  \
+# --max-count 5 \
+# --max-pods 100 \
+# --min-count 1 \
+# --node-resource-group $resourcegroup1 \
+# --node-vm-size Standard_D8s_v3\
+# # --network-plugin azure \
+# # --nodepool-name aksagent \
+# # --service-cidr 10.240.0.0/24 \
+# # --dns-service-ip 10.240.0.10 \
+# # # --enable-aad \
+# # # --tier {free, standard}
+# --kubernetes-version 1.24 \
+# --node-count 1 
+# # --tags Dept=DS Environment=Development Status=Normal Created=13April \
+# # --node-osdisk-size 150 \
+# # --os-sku Ubuntu
+# # --zones {1, 2, 3} \
+# # --enable-secret-rotation \
+# # --node-osdisk-type Ephemeral \ 
+# # # --generate-ssh-keys \
+# # --enable-addons monitoring \ 
+# # --enable-file-driver \
+# # --enable-disk-driver \
+# # # --ssh-key-value ~\.ssh\id_rsa.pub \
+# # # --vm-set-type 
+# # --no-ssh-key
+# # --yes
+
+# az aks browse --name $cluster1   --resource-group $resourcegroup1 --listen-address 127.0.0.1 --listen-port 8001

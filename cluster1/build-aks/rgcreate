@@ -1,0 +1,44 @@
+
+export resourcegroup1=aks-demo-rg1 
+export resourcegroup2=aks-demo-rg2 
+export location1=canadaeast
+export location2=canadacentral
+
+echo '...creating resource groups'
+
+if [ $(az group exists --name $resourcegroup1) = false ]; then 
+    az group create --name $resourcegroup1 --location $location1
+    export rg1=$(az group show --name $resourcegroup1 --query id --output tsv)
+    az tag create --resource-id $rg1 --tags Dept=DS Environment=Development Status=Normal 
+    echo 'resource group created successfully'
+else
+   echo $resourcegroup1' already exist, change name to continue'
+fi
+
+if [ $(az group exists --name $resourcegroup2) = false ]; then 
+    az group create --name $resourcegroup2 --location $location2
+    export rg2=$(az group show --name $resourcegroup2 --query id --output tsv)
+    az tag create --resource-id $rg2 --tags Dept=DS Environment=Development Status=Normal 
+    echo 'resource group created successfully'
+else
+   echo $resourcegroup2' already exist, change name to continue'
+fi
+
+
+
+
+# az group create --name aks-demo-$randomIdentifier --location canadaeast 
+# # az lock create --name LockGroup --lock-type CanNotDelete --resource-group aks-demo-rg1 
+# # az lock create --name LockGroup --lock-type CanNotDelete --resource-group aks-demo-rg2 
+# #az lock delete --name LockGroup --resource-group aks-demo-rg1 
+# # az lock delete --name LockGroup --resource-group aks-demo-rg2
+# rg1=$(az group show --name aks-demo-rg1 --query id --output tsv) 
+# rg2=$(az group show --name aks-demo-rg2 --query id --output tsv) 
+# az tag create --resource-id $rg1 --tags Dept=DS Environment=Development Status=Normal 
+# az tag create --resource-id $rg2 --tags Dept=DS Environment=Development Status=Normal task=Disaster-Recovery
+
+# if [ $(az group exists --name $resourceGroup1) = false ]; then 
+   
+# else
+#    echo $resourceGroup
+# fi

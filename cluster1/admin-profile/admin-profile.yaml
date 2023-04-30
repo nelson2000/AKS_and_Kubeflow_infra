@@ -1,0 +1,9 @@
+
+apiVersion: kubeflow.org/v1beta1
+kind: Profile
+metadata:
+  name: admin
+spec:
+  owner:
+    kind: User
+    name: admin@kubeflow.com

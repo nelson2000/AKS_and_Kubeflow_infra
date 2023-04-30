@@ -1,0 +1,94 @@
+# create a storage account automatically for AKS to use
+
+#  step1 install csi-driver
+################################
+
+
+# curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/install-driver.sh | bash -s master blobfuse-proxy --
+# or
+# git clone https://github.com/kubernetes-sigs/blob-csi-driver.git
+# cd blob-csi-driver
+# ./deploy/install-driver.sh master local,blobfuse-proxy
+
+# check pods to confirm
+
+# kubectl get all -n kube-system | grep csi
+
+# or
+
+# az aks create --enable-blob-driver -n myAKSCluster -g myResourceGroup
+# az aks update --enable-blob-driver -n myAKSCluster -g myResourceGroup
+
+
+# step 2  create storage class
+#####################################
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: blob
+provisioner: blob.csi.azure.com
+parameters:
+  skuName: Standard_LRS  # available values: Standard_LRS, Premium_LRS, Standard_GRS, Standard_RAGRS
+reclaimPolicy: Retain  # if set as "Delete" container would be removed after pvc deletion
+volumeBindingMode: Immediate
+mountOptions:
+  - -o allow_other
+  - --file-cache-timeout-in-seconds=120
+  - --use-attr-cache=true
+  - -o attr_timeout=120
+  - -o entry_timeout=120
+  - -o negative_timeout=120
+
+# step 3 create pvc
+#######################]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-blob
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: blob   
+
+# step 4 assign AKS managed identity to its resources
+######################################################
+
+# home > managed identities > aks-pool-agentpool
+
+# you can get the client id and object id
+
+# go to the node resource group and grant the neccessary role 
+
+# Home > mc_rg_aks_cluser... > add > role assignment > seketc role > userassigned managed identity > aks_cluster_nodepool
+
+# step 5 use these pod to test
+###################################
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-blob
+spec:
+  nodeSelector:
+    "kubernetes.io/os": linux
+  containers:
+    - image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
+      name: nginx-blob
+      command:
+        - "/bin/sh"
+        - "-c"
+        - while true; do echo $(date) >> /mnt/blob/outfile; sleep 1; done
+      volumeMounts:
+        - name: blob01
+          mountPath: "/mnt/blob"
+  volumes:
+    - name: blob01
+      persistentVolumeClaim:
+        claimName: pvc-blob  
+
+# step 6 check to see if the file outfile is created in the new blob created

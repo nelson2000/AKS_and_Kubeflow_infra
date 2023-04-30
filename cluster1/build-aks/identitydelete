@@ -1,0 +1,14 @@
+export resourcegroup1=aks-demo-rg1 
+export resourcegroup2=aks-demo-rg2 
+export location1=canadaeast
+export location2=canadacentral
+export iden1=aks-identity1
+export iden2=aks-identity2
+
+echo 'deleting managed identity....'
+# delete managed identities
+az identity delete -n $iden1 -g $resourcegroup1
+
+az identity delete -n $iden2 -g $resourcegroup2
+
+echo 'deleted  managed identities successfully'

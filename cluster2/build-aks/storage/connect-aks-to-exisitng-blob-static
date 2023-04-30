@@ -1,0 +1,74 @@
+# create a storage account automatically for AKS to use
+
+#  step1 create a secret
+################################
+
+# kubectl create secret generic azure-secret --from-literal accountname=fuse07e249afa8394b9fbfb --from-literal accountkey="xxxxxxxxxxxxxxxxxxxxNS2uCAU/G3hUmQcdFtfB95C8jhfs1XUsskbaY6hyxxxxxxxxxxxxxxxx" --type=Opaque
+
+# step 2 assign AKS managed identity to its resources
+######################################################
+
+# home > managed identities > aks-pool-agentpool
+
+# you can get the client id and object id
+
+# go to the node resource group and grant the neccessary role 
+
+# Home > mc_rg_aks_cluser... > add > role assignment > seketc role > userassigned managed identity > aks_cluster_nodepool
+
+# step 3  create storage class
+#####################################
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: blob
+provisioner: blob.csi.azure.com
+parameters:
+  csi.storage.k8s.io/provisioner-secret-name: azure-secret
+  csi.storage.k8s.io/provisioner-secret-namespace: default
+  csi.storage.k8s.io/node-stage-secret-name: azure-secret
+  csi.storage.k8s.io/node-stage-secret-namespace: default
+
+# step4  create a pvc
+#####################################
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-blob
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: blob
+
+# step 5 use these pod to test
+###################################
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-blob
+spec:
+  nodeSelector:
+    "kubernetes.io/os": linux
+  containers:
+    - image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
+      name: nginx-blob
+      command:
+        - "/bin/sh"
+        - "-c"
+        - while true; do echo $(date) >> /mnt/blob/outfile-existing-sa; sleep 1; done
+      volumeMounts:
+        - name: blob01
+          mountPath: "/mnt/blob"
+  volumes:
+    - name: blob01
+      persistentVolumeClaim:
+        claimName: pvc-blob
+
+
+

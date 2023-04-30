@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-api
+  labels:
+    app: flask-api
+  namespace: flaskapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flask-api
+  template:
+    metadata:
+      labels:
+        app: flask-api
+    spec:
+      containers:
+      - name: flask-api
+        image: frontendflaskapi.azurecr.io/flaskapi:local
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            memory: "300Mi"
+            cpu: "800m"
+          limits:
+            memory: "600Mi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: flask-api-storage
+          mountPath: /data
+      imagePullSecrets:
+        - name: acr-auth
+      volumes:
+      - name: flask-api-storage
+        persistentVolumeClaim:
+          claimName: flask-api-pvc
+  
+
+# create the secret for the registry
+
+
+# kubectl create secret docker-registry acr-auth \
+#   --docker-server=frontendflaskapi.azurecr.io \
+#   --docker-username=frontendflaskapi \
+#   --docker-password=i4Uj5msmaeu0uWrdE04P3LnI/Vv54o/ReoTHjmtEEC+ACRCZ7eSk \
+#   --docker-email=nelson.nwajie@larus.com
+
+
+
+#   az aks update -n aks-demo-cluster1 -g aks-demo-rg1 --attach-acr frontendflaskapi

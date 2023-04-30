@@ -1,0 +1,183 @@
+
+export resourcegroup1=aks-demo-rg1 
+export resourcegroup2=aks-demo-rg2 
+export vnet1=aks-demo-vnet1
+export vnet2=aks-demo-vnet2
+export location1=canadaeast
+export location2=canadacentral
+export subnet1=aks-demo-subnet1
+export subnet2=aks-demo-subnet2
+export cluster1=aks-demo-cluster1
+export cluster2=aks-demo-cluster2
+export iden1=aks-identity1
+export iden2=aks-identity2 
+
+
+echo 'creating the resource group....'
+# chmod +x create-resource-group.sh
+./rgcreate
+
+echo 'creating identities...'
+./identitycreate
+
+export identityId1=$(az identity show \
+    --name $iden1 \
+    --resource-group $resourcegroup1 \
+    --query id \
+    --output tsv)
+
+export identityId2=$(az identity show \
+    --name $iden2 \
+    --resource-group $resourcegroup2 \
+    --query id \
+    --output tsv)
+
+# echo 'creating vnets...'
+./netcreate
+
+export subnetId1=$(az network vnet subnet show --name $subnet1 \
+    --vnet-name $vnet1 \
+    --resource-group $resourcegroup1 \
+    --query id \
+    --output tsv) 
+
+export subnetId2=$(az network vnet subnet show --name $subnet2\
+    --vnet-name $vnet2 \
+    --resource-group $resourcegroup2 \
+    --query id \
+    --output tsv) 
+
+echo 'creating aks clusters...'
+./akscreate
+echo 'Creation of AKS clusters completed'
+echo 'Configuring AKS Cluster1...'
+rm -rf /home/nelsonnwajie/.kube/config
+az aks get-credentials --resource-group $resourcegroup1 --name $cluster1
+cd ~/everything/cluster1/build-aks/manifests/
+sh kubeflow.sh
+sleep 10
+sh kubeflow.sh
+kubectl patch service -n istio-system istio-ingressgateway -p '{"spec": {"type": "LoadBalancer"}}'
+sleep 5
+kubectl get svc -n istio-system istio-ingressgateway -o yaml | tail -1 
+# connect to existing blob
+cd ~/everything/cluster1/connect-blobs/
+kubectl create secret generic az-storage-creds --from-literal azurestorageaccountname=saasaccount --from-literal azurestorageaccountkey="IOi070DxvRY4G3LEKFz1BacHnOcZ3nchtLwZftRuk8ILbbQp1ZE2+GjTiBAOY/Nlg8pQDMs1Wy5g+AStQxu/6g==" --type=Opaque
+
+kubectl apply -f pipelinesblob.yaml
+kubectl apply -f thanosstoneblob.yaml
+# connect to existing frontendflaskapi container registry
+kubectl create secret docker-registry acr-auth \
+  --docker-server=frontendflaskapi.azurecr.io \
+  --docker-username=frontendflaskapi \
+  --docker-password=$key \
+  --docker-email=nelson.nwajie@larus.com
+# set up flaskapi
+cd ~/everything/cluster1/flaskapi-setup/
+echo 'connect the new cluster to the flask registry...'
+az aks update -n aks-demo-cluster1 -g aks-demo-rg1 --attach-acr frontendflaskapi
+kubectl create ns flaskapi
+kubectl apply -f flaskpvc.yaml
+kubectl apply -f flaskapi.yaml
+kubectl expose -f flaskapi.yaml --port=80 --target-port=8000 -n flaskapi
+kubectl patch service -n flaskapi flask-api -p '{"spec": {"type": "LoadBalancer"}}'
+kubectl get svc flask-api -n flaskapi -o yaml | tail -1
+################################
+# ssl/tls setup                #
+################################
+cd ~/everything/cluster1/cert-setup/
+####
+# dns names - 
+# kube-test.link 
+# netroxtechnologies.com 
+# netroxlabs.com
+# create secret
+kubectl apply -f aws-secret.yaml
+kubectl replace -f aws-secret.yaml --force
+# create issuer with letsencrypt
+kubectl apply -f  aws-issuer.yaml
+kubectl replace -f aws-issuer.yaml --force
+# create certificate for approval
+kubectl apply -f aws-cert.yaml
+kubectl apply -f aws-cert.yaml
+# modify gateway to use certificate
+kubectl replace -f gateway.yaml --force
+################################################
+#  create new profile, user and namespace
+################################################
+cd ~/everything/cluster1/admin-profile/
+kubectl apply -f admin-profile.yaml # build an admin profile
+kubectl create configmap dex --from-file=configmap.yaml=dex2.yaml -n auth --dry-run=client -o yaml | kubectl apply -f - # add email and password and adjust dex 
+kubectl rollout restart deployment dex -n auth
+# kubectl get svc -n istio-system istio-ingressgateway -o jsonpath='{.status.LoadBalancer.ingress[0]}'
+# kubectl debug node/aks-nodepool1-12345678-vmss000000 -it --image=mcr.microsoft.com/dotnet/runtime-deps:6.0
+echo 'flask public ip address'
+kubectl get svc flask-api -n flaskapi -o yaml | tail -1
+echo 'kubeflow public ip address'
+kubectl get svc -n istio-system istio-ingressgateway -o yaml | tail -1 
+
+# Setting up cluster2
+echo 'Configuring AKS Cluster2...'
+az aks get-credentials --resource-group $resourcegroup2 --name $cluster2
+cd ~/everything/cluster1/build-aks/manifests/
+sh kubeflow.sh
+sleep 10
+sh kubeflow.sh
+kubectl patch service -n istio-system istio-ingressgateway -p '{"spec": {"type": "LoadBalancer"}}'
+sleep 5
+kubectl get svc -n istio-system istio-ingressgateway -o yaml | tail -1 
+# connect to existing blob
+cd ~/everything/cluster2/connect-blobs/
+kubectl create secret generic az-storage-creds --from-literal azurestorageaccountname=saasaccount --from-literal azurestorageaccountkey="IOi070DxvRY4G3LEKFz1BacHnOcZ3nchtLwZftRuk8ILbbQp1ZE2+GjTiBAOY/Nlg8pQDMs1Wy5g+AStQxu/6g==" --type=Opaque
+
+kubectl apply -f pipelinesblob.yaml
+kubectl apply -f thanosstoneblob.yaml
+# connect to existing frontendflaskapi container registry
+kubectl create secret docker-registry acr-auth \
+  --docker-server=frontendflaskapi.azurecr.io \
+  --docker-username=frontendflaskapi \
+  --docker-password=$key \
+  --docker-email=nelson.nwajie@larus.com
+# set up flaskapi
+cd ~/everything/cluster2/flaskapi-setup/
+echo 'connect the new cluster to the flask registry...'
+az aks update -n aks-demo-cluster2 -g aks-demo-rg2 --attach-acr frontendflaskapi
+kubectl create ns flaskapi
+kubectl apply -f flaskpvc.yaml
+kubectl apply -f flaskapi.yaml
+kubectl expose -f flaskapi.yaml --port=80 --target-port=8000 -n flaskapi
+kubectl patch service -n flaskapi flask-api -p '{"spec": {"type": "LoadBalancer"}}'
+kubectl get svc flask-api -n flaskapi -o yaml | tail -1
+################################
+# ssl/tls setup                #
+################################
+cd ~/everything/cluster2/cert-setup/
+####
+# dns names - 
+# kube-test.link 
+# netroxtechnologies.com 
+# netroxlabs.com
+# create secret
+kubectl apply -f aws-secret.yaml
+kubectl replace -f aws-secret.yaml --force
+# create issuer with letsencrypt
+kubectl apply -f  aws-issuer.yaml
+kubectl replace -f aws-issuer.yaml --force
+# create certificate for approval
+kubectl apply -f aws-cert.yaml
+kubectl apply -f aws-cert.yaml
+# modify gateway to use certificate
+kubectl replace -f gateway.yaml --force
+################################################
+#  create new profile, user and namespace
+################################################
+cd ~/everything/cluster2/admin-profile/
+kubectl apply -f admin-profile.yaml # build an admin profile
+kubectl create configmap dex --from-file=configmap.yaml=dex2.yaml -n auth --dry-run=client -o yaml | kubectl apply -f - # add email and password and adjust dex 
+kubectl rollout restart deployment dex -n auth
+# kubectl get svc -n istio-system istio-ingressgateway -o jsonpath='{.status.LoadBalancer.ingress[0]}'
+# kubectl debug node/aks-nodepool1-12345678-vmss000000 -it --image=mcr.microsoft.com/dotnet/runtime-deps:6.0
+echo 'flask public ip address'
+kubectl get svc flask-api -n flaskapi -o yaml | tail -1
+echo 'kubeflow public ip address'
+kubectl get svc -n istio-system istio-ingressgateway -o yaml | tail -1 

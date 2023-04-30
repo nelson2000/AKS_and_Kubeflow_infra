@@ -1,0 +1,53 @@
+
+export resourcegroup1=aks-demo-rg1 
+export resourcegroup2=aks-demo-rg2 
+export vnet1=aks-demo-vnet1
+export vnet2=aks-demo-vnet2
+export location1=canadaeast
+export location2=canadacentral
+export subnet1=aks-demo-subnet1
+export subnet2=aks-demo-subnet2
+
+
+###########################################################################
+
+az network vnet create \
+    --name $vnet1 \
+    --resource-group $resourcegroup1 \
+    --address-prefixes 10.150.0.0/16  \
+    --location $location1
+
+# create subnet
+az network vnet subnet create \
+    --resource-group $resourcegroup1 \
+    --vnet-name $vnet1 \
+    --name $subnet1 \
+    --address-prefixes 10.150.20.0/24
+
+export subnetId1=$(az network vnet subnet show --name $subnet1 \
+    --vnet-name $vnet1 \
+    --resource-group $resourcegroup1 \
+    --query id \
+    --output tsv) 
+
+#######################################################################################
+
+az network vnet create \
+    --name $vnet2 \
+    --resource-group $resourcegroup2 \
+    --address-prefixes 10.150.0.0/16  \
+    --location $location2 \
+
+
+# create subnet
+az network vnet subnet create \
+    --resource-group $resourcegroup2 \
+    --vnet-name $vnet2 \
+    --name $subnet2 \
+    --address-prefixes 10.150.20.0/24
+
+export subnetId2=$(az network vnet subnet show --name $subnet2 \
+    --vnet-name $vnet2 \
+    --resource-group $resourcegroup2 \
+    --query id \
+    --output tsv) 

@@ -1,0 +1,39 @@
+
+
+prometheus and grafana
+-----------------------
+installing through prometheus operator 
+
+
+kubectl port-forward svc/istio-ingressgateway -n istio-system 8080:80
+
+
+docker RUN -it -v ${PWD}:/work -w /work alpine sh
+apk add git curl
+
+
+
+kubectl create -f setup/
+kubectl create -f .  manifest/
+
+
+change the exposed dashboard service to prometheus-operated
+
+kubectl -n monitoring get service
+
+you will see the prometheus-operated service
+
+from manifests folder change http://prometheus-k8s.monitoring.svc:9090 to http://prometheus-operated.monitoring.svc:9090
+
+
+
+kubectl apply -f grafana-dashboardDatasources.yaml
+
+restart grafana
+
+kubectl delete po <grafana-pod> -n monitoring
+
+
+
+kubectl -n monitoring port-forward svc/grafana 3000
+

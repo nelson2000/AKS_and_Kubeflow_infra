@@ -1,0 +1,61 @@
+
+keyvault
+az keyvault create -n aks-demo-keyvault -g aks-demo-rg1 -l canadacentral
+az keyvault secret set --vault-name <keyvault-name> -n ExampleSecret --value MyAKSExampleSecret
+
+metrics
+kubectl port-forward -n kube-system ds/aks-secrets-store-csi-driver 8095:8095 &
+curl localhost:8095/metrics
+
+prometheus metrics
+kubectl port-forward -n kube-system ds/aks-secrets-store-provider-azure 8898:8898 & curl localhost:8898/metrics
+
+add your sp to be contributor to the rg
+
+export SERVICEPRINCIPALNAME=aks-sp
+export RESOURCEGROUPNAME=aks-demo-rg1
+export SUBSCRIPTIONID=ab1c6053-fb6f-4ad2-8910-305638356165
+az ad sp create-for-rbac --name $SERVICEPRINCIPALNAME --role Contributor --scopes /subscriptions/$SUBSCRIPTIONID/resourceGroups/$RESOURCEGROUPNAME --sdk-auth
+
+############################################################################################################################
+export subscriptionID=<subscription id>
+export resourceGroupName=<resource group name>
+export UAMI=<name for user assigned identity>
+export KEYVAULT_NAME=<existing keyvault name>
+export clusterName=<aks cluster name>
+
+az account set --subscription $subscriptionID
+az identity create --name $UAMI --resource-group $resourceGroupName
+export USER_ASSIGNED_CLIENT_ID="$(az identity show -g $resourceGroupName --name $UAMI --query 'clientId' -o tsv)"
+export IDENTITY_TENANT=$(az aks show --name $clusterName --resource-group $resourceGroupName --query identity.tenantId -o tsv)
+
+az keyvault set-policy -n $KEYVAULT_NAME --key-permissions get --spn $USER_ASSIGNED_CLIENT_ID
+az keyvault set-policy -n $KEYVAULT_NAME --secret-permissions get --spn $USER_ASSIGNED_CLIENT_ID
+az keyvault set-policy -n $KEYVAULT_NAME --certificate-permissions get --spn $USER_ASSIGNED_CLIENT_ID
+#######################################################################################################################################
+
+az aks show -g aks-demo-rg1 -n aks-demo-cluster1 --query addonProfiles.azureKeyvaultSecretsProvider.identity.clientId -o tsv
+
+az identity create -g aks-demo-rg1 -n aks-demo-sp
+az vmss identity assign -g aks-demo-rg1 -n <agent-pool-vmss> --identities <identity-resource-id>
+az vm identity assign -g aks-demo-rg1 -n <agent-pool-vm> --identities <identity-resource-id>
+
+# set policy to access keys in your key vault
+az keyvault set-policy -n <keyvault-name> --key-permissions get --spn <identity-client-id>
+# set policy to access secrets in your key vault
+az keyvault set-policy -n <keyvault-name> --secret-permissions get --spn <identity-client-id>
+# set policy to access certs in your key vault
+az keyvault set-policy -n <keyvault-name> --certificate-permissions get --spn <identity-client-id>
+
+k apply -f SecretProviderClass.yaml
+k apply -f keyvault-pod.yaml
+     
+
+kubectl exec busybox-secrets-store-inline -- ls /mnt/secrets-store/
+
+## print a test secret 'ExampleSecret' held in secrets-store
+kubectl exec busybox-secrets-store-inline -- cat /mnt/secrets-store/ExampleSecret
+
+
+
+

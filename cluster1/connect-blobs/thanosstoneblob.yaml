@@ -1,0 +1,49 @@
+######################################### 
+#   Blob storage volume creation        #
+#########################################
+
+#########################################
+#         saasstorage account           #
+#        container: pipelines           #
+#########################################
+
+
+#  kubectl create secret generic az-storage-creds --from-literal azurestorageaccountname=saasaccount --from-literal azurestorageaccountkey="IOi070DxvRY4G3LEKFz1BacHnOcZ3nchtLwZftRuk8ILbbQp1ZE2+GjTiBAOY/Nlg8pQDMs1Wy5g+AStQxu/6g==" --type=Opaque
+
+
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: aks-thanos-pv
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain  # "Delete" is not supported in static provisioning
+  csi:
+    driver: blob.csi.azure.com
+    readOnly: false
+    volumeHandle: thanos-vol  # make sure this volumeid is unique in the cluster
+    volumeAttributes:
+      containerName: thanosstones
+    nodeStageSecretRef:
+      name: az-storage-creds
+      namespace: default
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: aks-thanos-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  volumeName: aks-thanos-pv
+  storageClassName: ""
+# ---

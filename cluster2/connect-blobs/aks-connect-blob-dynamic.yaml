@@ -1,0 +1,65 @@
+# for existing blob
+# step 1
+#  kubectl create secret generic az-storage-creds --from-literal azurestorageaccountname=saasaccount --from-literal azurestorageaccountkey="IOi070DxvRY4G3LEKFz1BacHnOcZ3nchtLwZftRuk8ILbbQp1ZE2+GjTiBAOY/Nlg8pQDMs1Wy5g+AStQxu/6g==" --type=Opaque
+
+# step2
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: az-storage-creds
+provisioner: blob.csi.azure.com
+parameters:
+  csi.storage.k8s.io/provisioner-secret-name: az-storage-creds
+  csi.storage.k8s.io/provisioner-secret-namespace: default
+  csi.storage.k8s.io/node-stage-secret-name: az-storage-creds
+  csi.storage.k8s.io/node-stage-secret-namespace: default
+
+# step3
+
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: az-storage-creds
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   resources:
+#     requests:
+#       storage: 50Gi
+#   storageClassName: az-storage-creds
+
+
+
+# for new blob
+###############
+
+# apiVersion: storage.k8s.io/v1
+# kind: StorageClass
+# metadata:
+#   name: newblob
+# provisioner: blob.csi.azure.com
+# parameters:
+#   skuName: Standard_LRS  # available values: Standard_LRS, Premium_LRS, Standard_GRS, Standard_RAGRS
+# reclaimPolicy: Retain  # if set as "Delete" container would be removed after pvc deletion
+# volumeBindingMode: Immediate
+# mountOptions:
+#   - -o allow_other
+#   - --file-cache-timeout-in-seconds=120
+#   - --use-attr-cache=true
+#   - -o attr_timeout=120
+#   - -o entry_timeout=120
+#   - -o negative_timeout=120
+
+# 
+
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: pvc-blob
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   resources:
+#     requests:
+#       storage: 20Gi
+#   storageClassName: blob 

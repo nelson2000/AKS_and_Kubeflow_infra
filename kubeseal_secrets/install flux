@@ -1,0 +1,39 @@
+Install Flux onto your cluster
+For information on how to bootstrap using a GitHub org, Gitlab and other git providers, see Installation.
+# install flux cli
+
+curl -s https://fluxcd.io/install.sh | sudo bash
+
+
+export GITHUB_TOKEN=<your-token>
+
+Run the bootstrap command:
+
+flux bootstrap git \
+  --url=ssh://git@<host>/<org>/<repository> \
+  --branch=<my-branch> \
+  --path=clusters/my-cluster
+
+
+
+flux bootstrap github \
+  --owner=$GITHUB_USER \
+  --repository=fleet-infra \
+  --branch=main \
+  --path=./clusters/my-cluster \
+  --personal
+
+
+
+The bootstrap command above does following:
+
+Creates a git repository fleet-infra on your GitHub account
+Adds Flux component manifests to the repository
+Deploys Flux Components to your Kubernetes Cluster
+Configures Flux components to track the path /clusters/my-cluster/ in the repository
+Clone the git repository
+
+export GITHUB_TOKEN=<your-token>
+export GITHUB_USER=<your-username>
+
+

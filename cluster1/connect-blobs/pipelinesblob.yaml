@@ -1,0 +1,71 @@
+######################################### 
+#   Blob storage volume creation        #
+#########################################
+
+#########################################
+#         saasstorage account           #
+#        container: pipelines           #
+#########################################
+
+
+#  kubectl create secret generic az-storage-creds --from-literal azurestorageaccountname=saasaccount --from-literal azurestorageaccountkey="IOi070DxvRY4G3LEKFz1BacHnOcZ3nchtLwZftRuk8ILbbQp1ZE2+GjTiBAOY/Nlg8pQDMs1Wy5g+AStQxu/6g==" --type=Opaque
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: aks-pipelines-pv
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain  # "Delete" is not supported in static provisioning
+  csi:
+    driver: blob.csi.azure.com
+    readOnly: false
+    volumeHandle: pipelines-vol  # make sure this volumeid is unique in the cluster
+    volumeAttributes:
+      containerName: pipelines
+    nodeStageSecretRef:
+      name: az-storage-creds
+      namespace: default
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: aks-pipelines-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  volumeName: aks-pipelines-pv
+  storageClassName: ""
+# ---
+
+# kind: Pod
+# apiVersion: v1
+# metadata:
+#   name: nginx-blob2
+# spec:
+#   nodeSelector:
+#     "kubernetes.io/os": linux
+#   containers:
+#     - image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
+#       name: nginx-blob
+#       command:
+#         - "/bin/sh"
+#         - "-c"
+#         - while true; do echo $(date) >> /mnt/blob/test-pipeline; sleep 1; done
+#       volumeMounts:
+#         - name: blob01
+#           mountPath: "/mnt/blob"
+#   volumes:
+#     - name: blob01
+#       persistentVolumeClaim:
+#         claimName: aks-pipelines-pvc
+
+
