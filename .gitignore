@@ -3,3 +3,9 @@ cluster2/cert-setup
 cluster2/build-aks/tls-tsermination
 cluster1/build-aks/tls-tsermination
 cluster2/config
+
+cluster1\cert-setup
+cluster2\cert-setup
+cluster2\build-aks\tls-tsermination
+cluster1\build-aks\tls-tsermination
+cluster2\config
